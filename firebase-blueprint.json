@@ -1,0 +1,25 @@
+{
+  "entities": {
+    "Project": {
+      "title": "Project",
+      "description": "A user's story project containing script and characters.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "The ID of the user who owns the project." },
+        "title": { "type": "string", "description": "Title of the story." },
+        "script": { "type": "string", "description": "The raw story script." },
+        "projectData": { "type": "string", "description": "JSON string containing characters and dialogues to bypass complex array rule limits." },
+        "status": { "type": "string", "description": "draft, generating, completed." },
+        "createdAt": { "type": "number", "description": "Timestamp" },
+        "updatedAt": { "type": "number", "description": "Timestamp" }
+      },
+      "required": ["userId", "title", "script", "projectData", "status", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "projects/{projectId}": {
+      "schema": { "$ref": "#/entities/Project" },
+      "description": "User's stories and output"
+    }
+  }
+}

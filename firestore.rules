@@ -1,0 +1,65 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Core Primitives ---
+    function isSignedIn() { return request.auth != null; }
+    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\\\-]+$'); }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+
+    // --- Entity Validations ---
+    function isValidProject(data) {
+      return data.keys().size() == 7
+        && data.keys().hasAll(['userId', 'title', 'script', 'projectData', 'status', 'createdAt', 'updatedAt'])
+        && data.userId is string && data.userId.size() <= 128
+        && data.title is string && data.title.size() <= 200
+        && data.script is string && data.script.size() <= 1000000
+        && data.projectData is string && data.projectData.size() <= 1000000
+        && data.status is string && data.status.size() <= 50
+        && data.createdAt is number
+        && data.updatedAt is number;
+    }
+
+    // Projects Collection Data Paths
+    match /projects/{projectId} {
+      // Create: User must be signed in, payload must be valid, userId must match
+      allow create: if isSignedIn()
+        && isValidId(projectId)
+        && isValidProject(incoming())
+        && incoming().userId == request.auth.uid
+        && incoming().createdAt == request.time.toMillis()
+        && incoming().updatedAt == request.time.toMillis();
+      
+      // Update: User must own the project, payload diff validated
+      allow update: if isSignedIn()
+        && isValidId(projectId)
+        && existing().userId == request.auth.uid
+        && incoming().userId == existing().userId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time.toMillis()
+        && (
+          incoming().diff(existing()).affectedKeys().hasOnly(['title', 'script', 'projectData', 'status', 'updatedAt'])
+        );
+      
+      // Read: Single fetch must be owner
+      allow get: if isSignedIn()
+        && isValidId(projectId)
+        && existing().userId == request.auth.uid;
+      
+      // Read: List queries must filter by owner
+      allow list: if isSignedIn()
+        && resource.data.userId == request.auth.uid;
+
+      // Delete: Must be owner
+      allow delete: if isSignedIn()
+        && isValidId(projectId)
+        && existing().userId == request.auth.uid;
+    }
+  }
+}

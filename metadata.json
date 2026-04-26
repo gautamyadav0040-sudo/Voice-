@@ -1,0 +1,5 @@
+{
+  "name": "Many Voice AI",
+  "description": "Multi Voice Story Generator that analyzes scripts, detects characters, and generates realistic multi-character voices.",
+  "requestFramePermissions": []
+}
